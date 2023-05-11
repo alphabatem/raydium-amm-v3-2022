@@ -9,7 +9,7 @@ use crate::libraries::{tick_math, U256};
 use crate::states::*;
 use crate::states::{MAX_TICK_ARRAY_START_INDEX, MIN_TICK_ARRAY_START_INDEX, TICK_ARRAY_SIZE};
 use anchor_lang::prelude::*;
-use anchor_spl::token::Mint;
+use anchor_spl::token::{Mint};
 #[cfg(feature = "enable-log")]
 use std::convert::identity;
 use std::ops::{BitAnd, BitOr, BitXor};
@@ -52,7 +52,7 @@ pub enum PoolStatusBitFlag {
 ///
 /// PDA of `[POOL_SEED, config, token_mint_0, token_mint_1]`
 ///
-#[account(zero_copy)]
+#[account(zero_copy(unsafe))]
 #[repr(packed)]
 #[derive(Default, Debug)]
 pub struct PoolState {
@@ -342,7 +342,7 @@ impl PoolState {
     pub fn update_reward_infos(
         &mut self,
         curr_timestamp: u64,
-    ) -> Result<([RewardInfo; REWARD_NUM])> {
+    ) -> Result<[RewardInfo; REWARD_NUM]> {
         #[cfg(feature = "enable-log")]
         msg!("current block timestamp:{}", curr_timestamp);
 
@@ -510,7 +510,7 @@ pub enum RewardState {
     Ended,
 }
 
-#[zero_copy]
+#[zero_copy(unsafe)]
 #[repr(packed)]
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct RewardInfo {

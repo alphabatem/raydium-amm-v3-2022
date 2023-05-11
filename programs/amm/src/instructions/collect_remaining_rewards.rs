@@ -2,7 +2,8 @@ use crate::error::ErrorCode;
 use crate::states::*;
 use crate::util::transfer_from_pool_vault_to_user;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount};
+use anchor_spl::token_interface::{Token2022};
+use anchor_spl::token::{TokenAccount};
 
 #[derive(Accounts)]
 pub struct CollectRemainingRewards<'info> {
@@ -16,8 +17,9 @@ pub struct CollectRemainingRewards<'info> {
     pub pool_state: AccountLoader<'info, PoolState>,
     /// Reward vault transfer remaining token to founder token account
     pub reward_token_vault: Box<Account<'info, TokenAccount>>,
-    #[account(address = token::ID)]
-    pub token_program: Program<'info, Token>,
+
+    // #[account(address = token::ID)]
+    pub token_program: Program<'info, Token2022>,
 }
 
 pub fn collect_remaining_rewards(

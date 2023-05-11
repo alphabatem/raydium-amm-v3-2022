@@ -6,7 +6,8 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token_interface::{Token2022};
+use anchor_spl::token::{TokenAccount, Mint};
 use mpl_token_metadata::{instruction::create_metadata_accounts_v3, state::Creator};
 use spl_token::instruction::AuthorityType;
 use std::cell::RefMut;
@@ -40,7 +41,7 @@ pub struct AddLiquidityParam<'b, 'info> {
     pub protocol_position: &'b mut Box<Account<'info, ProtocolPositionState>>,
 
     /// The SPL program to perform token transfers
-    pub token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
 }
 
 #[derive(Accounts)]
@@ -164,7 +165,7 @@ pub struct OpenPosition<'info> {
     pub system_program: Program<'info, System>,
 
     /// Program to create mint account and mint tokens
-    pub token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
 
     /// Program to create an ATA for receiving position NFT
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -408,20 +409,26 @@ pub fn add_liquidity<'b, 'info>(
         ErrorCode::PriceSlippageCheck
     );
 
+    let mut decimals;
+    if pool_state.token_mint_0.eq(&context.token_account_0.mint) { decimals = pool_state.mint_decimals_0 } else { decimals = pool_state.mint_decimals_1}
+
     transfer_from_user_to_pool_vault(
         &context.payer,
         &context.token_account_0,
         &context.token_vault_0,
         &context.token_program,
         amount_0,
+        decimals,
     )?;
 
+    if pool_state.token_mint_0.eq(&context.token_account_1.mint) { decimals = pool_state.mint_decimals_1 } else { decimals = pool_state.mint_decimals_0}
     transfer_from_user_to_pool_vault(
         &context.payer,
         &context.token_account_1,
         &context.token_vault_1,
         &context.token_program,
         amount_1,
+        decimals,
     )?;
     emit!(LiquidityChangeEvent {
         pool_state: pool_state.key(),
@@ -565,7 +572,7 @@ fn create_nft_with_metadata<'info>(
 ) -> Result<()> {
     let pool_state = pool_state_loader.load()?;
     let seeds = [
-        &POOL_SEED.as_bytes(),
+        POOL_SEED.as_bytes(),
         pool_state.amm_config.as_ref(),
         pool_state.token_mint_0.as_ref(),
         pool_state.token_mint_1.as_ref(),

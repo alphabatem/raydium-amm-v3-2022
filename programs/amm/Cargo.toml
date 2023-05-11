@@ -1,9 +1,9 @@
 [package]
 name = "raydium-amm-v3"
-version = "0.1.0"
+version = "0.2.0"
 description = "Anchor client and source for Raydium concentrated liquidity AMM"
 edition = "2021"
-keywords = ["solana", "anchor", "raydium"]
+keywords = ["solana", "anchor", "raydium", "token_2022"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -22,8 +22,8 @@ devnet = []
 paramset = []
 
 [dependencies]
-anchor-lang = {version = "0.26.0", features = ["init-if-needed"] }
-anchor-spl = "0.26.0"
+anchor-lang = {version = "0.27.0", features = ["init-if-needed"] }
+anchor-spl = "0.27.0"
 solana-program = "1.13.5"
 uint = "0.9.1"
 mpl-token-metadata = { version = "1.8.5", features = ["no-entrypoint"] }

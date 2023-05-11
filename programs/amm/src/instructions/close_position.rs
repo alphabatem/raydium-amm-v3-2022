@@ -2,7 +2,8 @@ use crate::error::ErrorCode;
 use crate::states::*;
 use crate::util::{burn, close_spl_account};
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token_interface::{Token2022};
+use anchor_spl::token::{TokenAccount, Mint};
 
 #[derive(Accounts)]
 pub struct ClosePosition<'info> {
@@ -33,7 +34,7 @@ pub struct ClosePosition<'info> {
 
     /// Metadata for the tokenized position
     #[account(
-        mut, 
+        mut,
         seeds = [POSITION_SEED.as_bytes(), position_nft_mint.key().as_ref()],
         bump,
         close = nft_owner
@@ -43,7 +44,7 @@ pub struct ClosePosition<'info> {
     /// Program to create the position manager state account
     pub system_program: Program<'info, System>,
     /// Program to create mint account and mint tokens
-    pub token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
 }
 
 pub fn close_position<'a, 'b, 'c, 'info>(
@@ -81,7 +82,7 @@ pub fn close_position<'a, 'b, 'c, 'info>(
             &[],
             1,
         )?;
-    
+
 
     close_spl_account(
         &ctx.accounts.nft_owner,

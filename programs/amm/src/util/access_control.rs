@@ -1,6 +1,7 @@
-use crate::error::ErrorCode;
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token::{TokenAccount};
+
+use crate::error::ErrorCode;
 
 /// Ensures that the signer is the owner or a delgated authority for the position NFT
 ///

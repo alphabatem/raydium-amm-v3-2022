@@ -1,9 +1,11 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface::Token2022;
+
 use crate::error::ErrorCode;
 use crate::libraries::{fixed_point_64, full_math::MulDiv, U256};
 use crate::states::*;
 use crate::util::transfer_from_user_to_pool_vault;
-use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount};
 
 #[derive(Accounts)]
 pub struct InitializeReward<'info> {
@@ -13,13 +15,13 @@ pub struct InitializeReward<'info> {
 
     // The funder's reward token account
     #[account(
-        mut,
-        token::mint = reward_token_mint
+    mut,
+    token::mint = reward_token_mint
     )]
     pub funder_token_account: Box<Account<'info, TokenAccount>>,
 
     /// For check the reward_funder authority
-    #[account(address = pool_state.load()?.amm_config)]
+    #[account(address = pool_state.load() ?.amm_config)]
     pub amm_config: Box<Account<'info, AmmConfig>>,
 
     /// Set reward for this pool
@@ -28,33 +30,34 @@ pub struct InitializeReward<'info> {
 
     /// load info from the account to judge reward permission
     #[account(
-        seeds = [
-            OPERATION_SEED.as_bytes(),
-        ],
-        bump,
+    seeds = [
+    OPERATION_SEED.as_bytes(),
+    ],
+    bump,
     )]
     pub operation_state: AccountLoader<'info, OperationState>,
 
     /// Reward mint
-    pub reward_token_mint: Box<Account<'info, Mint>>,
+    pub reward_token_mint: Box<Account<'info, TokenAccount>>,
 
     /// A pda, reward vault
     #[account(
-        init,
-        seeds =[
-            POOL_REWARD_VAULT_SEED.as_bytes(),
-            pool_state.key().as_ref(),
-            reward_token_mint.key().as_ref(),
-        ],
-        bump,
-        payer = reward_funder,
-        token::mint = reward_token_mint,
-        token::authority = pool_state
+    init,
+    seeds = [
+    POOL_REWARD_VAULT_SEED.as_bytes(),
+    pool_state.key().as_ref(),
+    reward_token_mint.key().as_ref(),
+    ],
+    bump,
+    payer = reward_funder,
+    token::mint = reward_token_mint,
+    token::authority = pool_state
     )]
     pub reward_token_vault: Box<Account<'info, TokenAccount>>,
 
-    #[account(address = token::ID)]
-    pub token_program: Program<'info, Token>,
+    // #[account(address = token::ID)]
+    pub token_program: Program<'info, Token2022>,
+
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
@@ -127,12 +130,20 @@ pub fn initialize_reward(
         &operation_state,
     )?;
 
+    let decimals;
+    if pool_state.token_mint_0.eq(&ctx.accounts.reward_token_mint.mint) {
+        decimals = pool_state.mint_decimals_0
+    } else {
+        decimals = pool_state.mint_decimals_1
+    }
+
     transfer_from_user_to_pool_vault(
         &ctx.accounts.reward_funder,
         &ctx.accounts.funder_token_account,
         &ctx.accounts.reward_token_vault,
         &ctx.accounts.token_program,
         reward_amount,
+        decimals,
     )?;
 
     Ok(())

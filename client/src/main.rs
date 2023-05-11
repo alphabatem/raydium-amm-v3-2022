@@ -1,7 +1,13 @@
 #![allow(dead_code)]
+
+use std::{collections::VecDeque, convert::identity, mem::size_of};
+use std::path::Path;
+use std::rc::Rc;
+use std::str::FromStr;
+
 use anchor_client::{Client, Cluster};
-use anchor_lang::prelude::AccountMeta;
 use anchor_lang::AnchorDeserialize;
+use anchor_lang::prelude::AccountMeta;
 use anyhow::{format_err, Result};
 use arrayref::array_ref;
 use configparser::ini::Ini;
@@ -24,12 +30,8 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use std::path::Path;
-use std::rc::Rc;
-use std::str::FromStr;
-use std::{collections::VecDeque, convert::identity, mem::size_of};
+use spl_associated_token_account::get_associated_token_address;
 
-mod instructions;
 use instructions::amm_instructions::*;
 use instructions::rpc::*;
 use instructions::token_instructions::*;
@@ -38,9 +40,11 @@ use raydium_amm_v3::{
     libraries::{fixed_point_64, liquidity_math, tick_array_bit_map, tick_math},
     states::{PoolState, TickArrayState},
 };
-use spl_associated_token_account::get_associated_token_address;
 
 use crate::instructions::utils;
+
+mod instructions;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClientConfig {
     http_url: String,
@@ -128,7 +132,7 @@ fn load_cfg(client_config: &String) -> Result<ClientConfig> {
                 ],
                 &raydium_v3_program,
             )
-            .0,
+                .0,
         )
     } else {
         None
@@ -147,14 +151,17 @@ fn load_cfg(client_config: &String) -> Result<ClientConfig> {
         amm_config_index,
     })
 }
+
 fn read_keypair_file(s: &str) -> Result<Keypair> {
     solana_sdk::signature::read_keypair_file(s)
         .map_err(|_| format_err!("failed to read keypair from {}", s))
 }
+
 fn write_keypair_file(keypair: &Keypair, outfile: &str) -> Result<String> {
     solana_sdk::signature::write_keypair_file(keypair, outfile)
         .map_err(|_| format_err!("failed to write keypair to {}", outfile))
 }
+
 fn path_is_exist(path: &str) -> bool {
     Path::new(path).exists()
 }
@@ -178,7 +185,7 @@ fn load_cur_and_next_five_tick_array(
             ],
             &pool_config.raydium_v3_program,
         )
-        .0,
+            .0,
     );
     let mut max_array_size = 5;
     while max_array_size != 0 {
@@ -201,7 +208,7 @@ fn load_cur_and_next_five_tick_array(
                 ],
                 &pool_config.raydium_v3_program,
             )
-            .0,
+                .0,
         );
         max_array_size -= 1;
     }
@@ -212,7 +219,7 @@ fn load_cur_and_next_five_tick_array(
             deserialize_anchor_account::<raydium_amm_v3::states::TickArrayState>(
                 &tick_array.unwrap(),
             )
-            .unwrap();
+                .unwrap();
         tick_arrays.push_back(tick_array_state);
     }
     tick_arrays
@@ -225,6 +232,7 @@ struct TokenInfo {
     amount: u64,
     decimals: u8,
 }
+
 fn get_nft_account_and_position_by_owner(
     client: &RpcClient,
     owner: &Pubkey,
@@ -880,7 +888,7 @@ fn main() -> Result<()> {
                         &[raydium_amm_v3::states::OPERATION_SEED.as_bytes()],
                         &program.id(),
                     )
-                    .0;
+                        .0;
 
                     let reward_token_vault = Pubkey::find_program_address(
                         &[
@@ -890,7 +898,7 @@ fn main() -> Result<()> {
                         ],
                         &program.id(),
                     )
-                    .0;
+                        .0;
                     let user_reward_token =
                         get_associated_token_address(&admin.pubkey(), &reward_token_mint);
                     let create_instr = initialize_reward_instr(
@@ -939,7 +947,7 @@ fn main() -> Result<()> {
                         &[raydium_amm_v3::states::OPERATION_SEED.as_bytes()],
                         &program.id(),
                     )
-                    .0;
+                        .0;
 
                     let reward_token_vault = Pubkey::find_program_address(
                         &[
@@ -949,7 +957,7 @@ fn main() -> Result<()> {
                         ],
                         &program.id(),
                     )
-                    .0;
+                        .0;
                     let user_reward_token =
                         get_associated_token_address(&admin.pubkey(), &reward_token_mint);
                     let create_instr = set_reward_params_instr(
@@ -1530,11 +1538,11 @@ fn main() -> Result<()> {
                     let user_input_state = spl_token::state::Account::unpack(
                         &user_input_account.as_ref().unwrap().data,
                     )
-                    .unwrap();
+                        .unwrap();
                     let user_output_state = spl_token::state::Account::unpack(
                         &user_output_account.as_ref().unwrap().data,
                     )
-                    .unwrap();
+                        .unwrap();
                     let amm_config_state =
                         deserialize_anchor_account::<raydium_amm_v3::states::AmmConfig>(
                             amm_config_account.as_ref().unwrap(),
@@ -1572,7 +1580,7 @@ fn main() -> Result<()> {
                             &pool_state,
                             &mut tick_arrays,
                         )
-                        .unwrap();
+                            .unwrap();
 
                     let current_or_next_tick_array_key = Pubkey::find_program_address(
                         &[
@@ -1582,7 +1590,7 @@ fn main() -> Result<()> {
                         ],
                         &pool_config.raydium_v3_program,
                     )
-                    .0;
+                        .0;
                     let remaining_accounts = tick_array_indexs
                         .into_iter()
                         .map(|index| {
@@ -1595,7 +1603,7 @@ fn main() -> Result<()> {
                                     ],
                                     &pool_config.raydium_v3_program,
                                 )
-                                .0,
+                                    .0,
                                 false,
                             )
                         })
@@ -1624,7 +1632,7 @@ fn main() -> Result<()> {
                         sqrt_price_limit_x64,
                         is_base_input,
                     )
-                    .unwrap();
+                        .unwrap();
                     // send
                     let signers = vec![&payer];
                     let recent_hash = rpc_client.get_latest_blockhash()?;
@@ -1662,11 +1670,11 @@ fn main() -> Result<()> {
                     let user_input_state = spl_token::state::Account::unpack(
                         &user_input_account.as_ref().unwrap().data,
                     )
-                    .unwrap();
+                        .unwrap();
                     let user_output_state = spl_token::state::Account::unpack(
                         &user_output_account.as_ref().unwrap().data,
                     )
-                    .unwrap();
+                        .unwrap();
                     let amm_config_state =
                         deserialize_anchor_account::<raydium_amm_v3::states::AmmConfig>(
                             amm_config_account.as_ref().unwrap(),
@@ -1704,7 +1712,7 @@ fn main() -> Result<()> {
                             &pool_state,
                             &mut tick_arrays,
                         )
-                        .unwrap();
+                            .unwrap();
 
                     let current_or_next_tick_array_key = Pubkey::find_program_address(
                         &[
@@ -1714,7 +1722,7 @@ fn main() -> Result<()> {
                         ],
                         &pool_config.raydium_v3_program,
                     )
-                    .0;
+                        .0;
                     let remaining_accounts = tick_array_indexs
                         .into_iter()
                         .map(|index| {
@@ -1727,7 +1735,7 @@ fn main() -> Result<()> {
                                     ],
                                     &pool_config.raydium_v3_program,
                                 )
-                                .0,
+                                    .0,
                                 false,
                             )
                         })
@@ -1756,7 +1764,7 @@ fn main() -> Result<()> {
                         sqrt_price_limit_x64,
                         is_base_input,
                     )
-                    .unwrap();
+                        .unwrap();
                     // send
                     let signers = vec![&payer];
                     let recent_hash = rpc_client.get_latest_blockhash()?;
@@ -1776,7 +1784,7 @@ fn main() -> Result<()> {
                     let sqrt_price_x64 = tick_math::get_sqrt_price_at_tick(tick)?;
                     let sqrt_price_f = (sqrt_price_x64 >> fixed_point_64::RESOLUTION) as f64
                         + (sqrt_price_x64 % fixed_point_64::Q64) as f64
-                            / fixed_point_64::Q64 as f64;
+                        / fixed_point_64::Q64 as f64;
                     println!("{}-{}", sqrt_price_x64, sqrt_price_f * sqrt_price_f);
                 }
             }
@@ -1800,7 +1808,7 @@ fn main() -> Result<()> {
                     let sqrt_price_x64 = v[1].parse::<u128>().unwrap();
                     let sqrt_price_f = (sqrt_price_x64 >> fixed_point_64::RESOLUTION) as f64
                         + (sqrt_price_x64 % fixed_point_64::Q64) as f64
-                            / fixed_point_64::Q64 as f64;
+                        / fixed_point_64::Q64 as f64;
                     let tick = (sqrt_price_f * sqrt_price_f).log(Q_RATIO) as i32;
                     println!(
                         "tick:{}, sqrt_price_f:{}, price:{}",
@@ -1853,10 +1861,10 @@ fn main() -> Result<()> {
                             let ix = raydium_amm_v3::instruction::OpenPosition::deserialize(
                                 &mut &ix_data[..],
                             )
-                            .map_err(|_| {
-                                anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
-                            })
-                            .unwrap();
+                                .map_err(|_| {
+                                    anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
+                                })
+                                .unwrap();
                             let raydium_amm_v3::instruction::OpenPosition {
                                 tick_lower_index,
                                 tick_upper_index,
@@ -1872,10 +1880,10 @@ fn main() -> Result<()> {
                             let ix = raydium_amm_v3::instruction::IncreaseLiquidity::deserialize(
                                 &mut &ix_data[..],
                             )
-                            .map_err(|_| {
-                                anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
-                            })
-                            .unwrap();
+                                .map_err(|_| {
+                                    anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
+                                })
+                                .unwrap();
                             let raydium_amm_v3::instruction::IncreaseLiquidity {
                                 liquidity,
                                 amount_0_max,
@@ -1890,10 +1898,10 @@ fn main() -> Result<()> {
                             let ix = raydium_amm_v3::instruction::DecreaseLiquidity::deserialize(
                                 &mut &ix_data[..],
                             )
-                            .map_err(|_| {
-                                anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
-                            })
-                            .unwrap();
+                                .map_err(|_| {
+                                    anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
+                                })
+                                .unwrap();
                             let raydium_amm_v3::instruction::DecreaseLiquidity {
                                 liquidity,
                                 amount_0_min,
@@ -1926,10 +1934,10 @@ fn main() -> Result<()> {
                             let ix = raydium_amm_v3::instruction::InitializeReward::deserialize(
                                 &mut &ix_data[..],
                             )
-                            .map_err(|_| {
-                                anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
-                            })
-                            .unwrap();
+                                .map_err(|_| {
+                                    anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
+                                })
+                                .unwrap();
                             let raydium_amm_v3::instructions::InitializeRewardParam {
                                 open_time,
                                 end_time,
@@ -1990,10 +1998,10 @@ fn main() -> Result<()> {
                             let log = raydium_amm_v3::states::DecreaseLiquidityEvent::deserialize(
                                 &mut &slice[..],
                             )
-                            .map_err(|_| {
-                                anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
-                            })
-                            .unwrap();
+                                .map_err(|_| {
+                                    anchor_lang::error::ErrorCode::InstructionDidNotDeserialize
+                                })
+                                .unwrap();
                             let raydium_amm_v3::states::DecreaseLiquidityEvent {
                                 position_nft_mint,
                                 liquidity,
@@ -2003,7 +2011,7 @@ fn main() -> Result<()> {
                                 fee_amount_1,
                                 reward_amounts,
                             } = log;
-                            println!("position_nft_mint:{}, liquidity:{}, decrease_amount_0:{}, decrease_amount_1:{}, fee_amount_0:{}, fee_amount_1:{}, reward_amounts:{:?}", position_nft_mint, liquidity, decrease_amount_0, decrease_amount_1,fee_amount_0,fee_amount_1,reward_amounts);
+                            println!("position_nft_mint:{}, liquidity:{}, decrease_amount_0:{}, decrease_amount_1:{}, fee_amount_0:{}, fee_amount_1:{}, reward_amounts:{:?}", position_nft_mint, liquidity, decrease_amount_0, decrease_amount_1, fee_amount_0, fee_amount_1, reward_amounts);
                         }
                         _ => {
                             println!("Not decode yet");

@@ -1,3 +1,13 @@
+use std::cell::RefMut;
+use std::collections::VecDeque;
+#[cfg(feature = "enable-log")]
+use std::convert::identity;
+use std::ops::Neg;
+
+use anchor_lang::prelude::*;
+use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface::Token2022;
+
 use crate::error::ErrorCode;
 use crate::libraries::{
     big_num::{U1024, U128},
@@ -7,13 +17,6 @@ use crate::libraries::{
 };
 use crate::states::*;
 use crate::util::*;
-use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
-use std::cell::RefMut;
-use std::collections::VecDeque;
-#[cfg(feature = "enable-log")]
-use std::convert::identity;
-use std::ops::Neg;
 
 #[derive(Accounts)]
 pub struct SwapSingle<'info> {
@@ -21,7 +24,7 @@ pub struct SwapSingle<'info> {
     pub payer: Signer<'info>,
 
     /// The factory state to read protocol fees
-    #[account(address = pool_state.load()?.amm_config)]
+    #[account(address = pool_state.load() ?.amm_config)]
     pub amm_config: Box<Account<'info, AmmConfig>>,
 
     /// The program account of the pool in which the swap will be performed
@@ -45,13 +48,13 @@ pub struct SwapSingle<'info> {
     pub output_vault: Box<Account<'info, TokenAccount>>,
 
     /// The program account for the most recent oracle observation
-    #[account(mut, address = pool_state.load()?.observation_key)]
+    #[account(mut, address = pool_state.load() ?.observation_key)]
     pub observation_state: AccountLoader<'info, ObservationState>,
 
     /// SPL program for token transfers
-    pub token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
 
-    #[account(mut, constraint = tick_array.load()?.pool_id == pool_state.key())]
+    #[account(mut, constraint = tick_array.load() ?.pool_id == pool_state.key())]
     pub tick_array: AccountLoader<'info, TickArrayState>,
 }
 
@@ -72,7 +75,7 @@ pub struct SwapAccounts<'b, 'info> {
     pub output_vault: Box<Account<'info, TokenAccount>>,
 
     /// SPL program for token transfers
-    pub token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
     /// The factory state to read protocol fees
     pub amm_config: &'b Box<Account<'info, AmmConfig>>,
 
@@ -188,7 +191,7 @@ pub fn swap_internal<'b, 'info>(
         ],
         &crate::id(),
     )
-    .0;
+        .0;
 
     let mut tick_array_current = tick_array_states.pop_front().unwrap();
     for _ in 0..tick_array_states.len() {
@@ -565,19 +568,19 @@ pub fn exact_internal<'b, 'info>(
     sqrt_price_limit_x64: u128,
     is_base_input: bool,
 ) -> Result<u64> {
-    let block_timestamp = solana_program::clock::Clock::get()?.unix_timestamp as u64;
+    let block_timestamp = Clock::get()?.unix_timestamp as u64;
 
     let amount_0;
     let amount_1;
     let zero_for_one;
     let swap_price_before;
+    let pool_state= &mut ctx.pool_state.load_mut()?;
 
     let input_balance_before = ctx.input_vault.amount;
     let output_balance_before = ctx.output_vault.amount;
 
     {
         swap_price_before = ctx.pool_state.load()?.sqrt_price_x64;
-        let pool_state = &mut ctx.pool_state.load_mut()?;
         zero_for_one = ctx.input_vault.mint == pool_state.token_mint_0;
 
         require_gt!(block_timestamp, pool_state.open_time);
@@ -631,6 +634,7 @@ pub fn exact_internal<'b, 'info>(
             ErrorCode::TooSmallInputOrOutputAmount
         );
     }
+
     let (token_account_0, token_account_1, vault_0, vault_1) = if zero_for_one {
         (
             ctx.input_token_account.clone(),
@@ -648,6 +652,9 @@ pub fn exact_internal<'b, 'info>(
     };
 
     if zero_for_one {
+        let decimals;
+        if token_account_0.mint.eq(&pool_state.token_mint_0) { decimals = pool_state.mint_decimals_0 } else { decimals = pool_state.mint_decimals_1 }
+
         //  x -> y, deposit x token from user to pool vault.
         transfer_from_user_to_pool_vault(
             &ctx.signer,
@@ -655,11 +662,13 @@ pub fn exact_internal<'b, 'info>(
             &vault_0,
             &ctx.token_program,
             amount_0,
+            decimals,
         )?;
         if vault_1.amount <= amount_1 {
             // freeze pool, disable all instructions
             ctx.pool_state.load_mut()?.set_status(255);
         }
+
         // x -> y，transfer y token from pool vault to user.
         transfer_from_pool_vault_to_user(
             &ctx.pool_state,
@@ -669,12 +678,16 @@ pub fn exact_internal<'b, 'info>(
             amount_1,
         )?;
     } else {
+        let decimals;
+        if token_account_1.mint.eq(&pool_state.token_mint_0) { decimals = pool_state.mint_decimals_0 } else { decimals = pool_state.mint_decimals_1 }
+
         transfer_from_user_to_pool_vault(
             &ctx.signer,
             &token_account_1,
             &vault_1,
             &ctx.token_program,
             amount_1,
+            decimals,
         )?;
         if vault_0.amount <= amount_0 {
             // freeze pool, disable all instructions
@@ -765,13 +778,15 @@ pub fn swap<'a, 'b, 'c, 'info>(
 
 #[cfg(test)]
 mod swap_test {
-    use super::*;
+    use std::cell::RefCell;
+    use std::vec;
+
     use crate::states::pool_test::build_pool;
     use crate::states::tick_array_test::{
         build_tick, build_tick_array_with_tick_states, TickArrayInfo,
     };
-    use std::cell::RefCell;
-    use std::vec;
+
+    use super::*;
 
     pub fn get_tick_array_states_mut(
         deque_tick_array_states: &VecDeque<RefCell<TickArrayState>>,
@@ -871,7 +886,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(
@@ -901,7 +916,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(
@@ -928,7 +943,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(
@@ -984,7 +999,7 @@ mod swap_test {
                 false,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(
@@ -1014,7 +1029,7 @@ mod swap_test {
                 false,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(
@@ -1041,7 +1056,7 @@ mod swap_test {
                 false,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(
@@ -1097,7 +1112,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(
@@ -1126,7 +1141,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(
@@ -1154,7 +1169,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(
@@ -1210,7 +1225,7 @@ mod swap_test {
                 false,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(
@@ -1239,7 +1254,7 @@ mod swap_test {
                 false,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(
@@ -1267,7 +1282,7 @@ mod swap_test {
                 false,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(
@@ -1316,7 +1331,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(
@@ -1360,7 +1375,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(
@@ -1375,8 +1390,10 @@ mod swap_test {
 
     #[cfg(test)]
     mod liquidity_insufficient_test {
-        use super::*;
         use crate::error::ErrorCode;
+
+        use super::*;
+
         #[test]
         fn no_enough_initialized_tickarray_in_pool_test() {
             let tick_current = -28776;
@@ -1441,7 +1458,7 @@ mod swap_test {
             true,
             oracle::block_timestamp_mock() as u32,
         )
-        .unwrap();
+            .unwrap();
         println!("amount_0:{},amount_1:{}", amount_0, amount_1);
         assert!(pool_state.borrow().tick_current < tick_current);
         assert!(pool_state.borrow().tick_current == -28860);
@@ -1463,7 +1480,7 @@ mod swap_test {
             true,
             oracle::block_timestamp_mock() as u32,
         )
-        .unwrap();
+            .unwrap();
         println!("amount_0:{},amount_1:{}", amount_0, amount_1);
         assert!(pool_state.borrow().tick_current < tick_current);
         assert!(pool_state.borrow().tick_current == -28861);
@@ -1488,7 +1505,7 @@ mod swap_test {
             true,
             oracle::block_timestamp_mock() as u32,
         )
-        .unwrap();
+            .unwrap();
         println!("amount_0:{},amount_1:{}", amount_0, amount_1);
         assert!(pool_state.borrow().tick_current == -28861);
         assert!(
@@ -1540,7 +1557,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current < tick_current);
             assert!(pool_state.borrow().tick_current == -28861);
@@ -1566,7 +1583,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current == tick_current);
             assert!(pool_state.borrow().tick_current == -28861);
@@ -1590,7 +1607,7 @@ mod swap_test {
                 true,
                 oracle::block_timestamp_mock() as u32,
             )
-            .unwrap();
+                .unwrap();
             println!("amount_0:{},amount_1:{}", amount_0, amount_1);
             assert!(pool_state.borrow().tick_current > tick_current);
             assert!(pool_state.borrow().sqrt_price_x64 > sqrt_price_x64);

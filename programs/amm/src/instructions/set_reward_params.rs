@@ -4,7 +4,8 @@ use crate::states::pool::{reward_period_limit, PoolState, REWARD_NUM};
 use crate::states::*;
 use crate::util::transfer_from_user_to_pool_vault;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
+use anchor_spl::token_interface::{Token2022};
+use anchor_spl::token::{TokenAccount};
 
 #[derive(Accounts)]
 pub struct SetRewardParams<'info> {
@@ -92,10 +93,17 @@ pub fn set_reward_params<'a, 'b, 'c, 'info>(
             Account::<TokenAccount>::try_from(&remaining_accounts.next().unwrap())?;
         let authority_token_account =
             Account::<TokenAccount>::try_from(&remaining_accounts.next().unwrap())?;
-        let token_program = Program::<Token>::try_from(remaining_accounts.next().unwrap())?;
+        let token_program = Program::<Token2022>::try_from(remaining_accounts.next().unwrap())?;
 
         require_keys_eq!(reward_token_vault.mint, authority_token_account.mint);
         require_keys_eq!(reward_token_vault.key(), reward_info.token_vault);
+
+        let decimals;
+        if pool_state.token_mint_0.eq(&authority_token_account.mint) {
+            decimals = pool_state.mint_decimals_0
+        } else {
+            decimals = pool_state.mint_decimals_1
+        }
 
         transfer_from_user_to_pool_vault(
             &ctx.accounts.authority,
@@ -103,6 +111,7 @@ pub fn set_reward_params<'a, 'b, 'c, 'info>(
             &reward_token_vault,
             &token_program,
             reward_amount,
+            decimals
         )?;
     }
 

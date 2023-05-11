@@ -1,7 +1,9 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token::{Mint, TokenAccount};
+use anchor_spl::token_interface::Token2022;
+
 use crate::libraries::tick_math;
 use crate::states::*;
-use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
 
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
@@ -14,22 +16,22 @@ pub struct CreatePool<'info> {
 
     /// Initialize an account to store the pool state
     #[account(
-        init,
-        seeds = [
-            POOL_SEED.as_bytes(),
-            amm_config.key().as_ref(),
-            token_mint_0.key().as_ref(),
-            token_mint_1.key().as_ref(),
-        ],
-        bump,
-        payer = pool_creator,
-        space = PoolState::LEN
+    init,
+    seeds = [
+    POOL_SEED.as_bytes(),
+    amm_config.key().as_ref(),
+    token_mint_0.key().as_ref(),
+    token_mint_1.key().as_ref(),
+    ],
+    bump,
+    payer = pool_creator,
+    space = PoolState::LEN
     )]
     pub pool_state: AccountLoader<'info, PoolState>,
 
     /// Token_0 mint, the key must grater then token_1 mint.
     #[account(
-        constraint = token_mint_0.key() < token_mint_1.key()
+    constraint = token_mint_0.key() < token_mint_1.key()
     )]
     pub token_mint_0: Box<Account<'info, Mint>>,
 
@@ -38,31 +40,31 @@ pub struct CreatePool<'info> {
 
     /// Token_0 vault for the pool
     #[account(
-        init,
-        seeds =[
-            POOL_VAULT_SEED.as_bytes(),
-            pool_state.key().as_ref(),
-            token_mint_0.key().as_ref(),
-        ],
-        bump,
-        payer = pool_creator,
-        token::mint = token_mint_0,
-        token::authority = pool_state
+    init,
+    seeds = [
+    POOL_VAULT_SEED.as_bytes(),
+    pool_state.key().as_ref(),
+    token_mint_0.key().as_ref(),
+    ],
+    bump,
+    payer = pool_creator,
+    token::mint = token_mint_0,
+    token::authority = pool_state
     )]
     pub token_vault_0: Box<Account<'info, TokenAccount>>,
 
     /// Token_1 vault for the pool
     #[account(
-        init,
-        seeds =[
-            POOL_VAULT_SEED.as_bytes(),
-            pool_state.key().as_ref(),
-            token_mint_1.key().as_ref(),
-        ],
-        bump,
-        payer = pool_creator,
-        token::mint = token_mint_1,
-        token::authority = pool_state
+    init,
+    seeds = [
+    POOL_VAULT_SEED.as_bytes(),
+    pool_state.key().as_ref(),
+    token_mint_1.key().as_ref(),
+    ],
+    bump,
+    payer = pool_creator,
+    token::mint = token_mint_1,
+    token::authority = pool_state
     )]
     pub token_vault_1: Box<Account<'info, TokenAccount>>,
 
@@ -70,7 +72,7 @@ pub struct CreatePool<'info> {
     pub observation_state: UncheckedAccount<'info>,
 
     /// Spl token program
-    pub token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
     /// To create a new program account
     pub system_program: Program<'info, System>,
     /// Sysvar for program account

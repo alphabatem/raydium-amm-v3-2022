@@ -17,7 +17,7 @@ pub const TICK_ARRAY_SIZE: i32 = 60;
 pub const MIN_TICK_ARRAY_START_INDEX: i32 = -307200;
 pub const MAX_TICK_ARRAY_START_INDEX: i32 = 306600;
 
-#[account(zero_copy)]
+#[account(zero_copy(unsafe))]
 #[repr(packed)]
 pub struct TickArrayState {
     pub pool_id: Pubkey,
@@ -296,7 +296,7 @@ impl Default for TickArrayState {
     }
 }
 
-#[zero_copy]
+#[zero_copy(unsafe)]
 #[repr(packed)]
 #[derive(Default, Debug)]
 pub struct TickState {
@@ -470,7 +470,7 @@ pub fn get_reward_growths_inside(
     tick_upper: &TickState,
     tick_current_index: i32,
     reward_infos: &[RewardInfo; REWARD_NUM],
-) -> ([u128; REWARD_NUM]) {
+) -> [u128; REWARD_NUM] {
     let mut reward_growths_inside = [0; REWARD_NUM];
 
     for i in 0..REWARD_NUM {
