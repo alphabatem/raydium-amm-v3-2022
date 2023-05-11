@@ -30,6 +30,7 @@ mpl-token-metadata = { version = "1.8.5", features = ["no-entrypoint"] }
 spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
 bytemuck = { version = "1.4.0" }
 arrayref ={ version = "0.3.6"}
+winnow = "=0.4.1"
 
 [dev-dependencies]
 quickcheck = "0.9"
