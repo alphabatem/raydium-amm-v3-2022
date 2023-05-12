@@ -1,10 +1,11 @@
+use anchor_spl::{token_interface::{Token2022, TokenAccount}};
+
+use anchor_lang::prelude::*;
+
 use crate::decrease_liquidity::check_unclaimed_fees_and_vault;
 use crate::error::ErrorCode;
 use crate::states::*;
 use crate::util::*;
-use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Token2022};
-use anchor_spl::token::{TokenAccount};
 
 #[derive(Accounts)]
 pub struct CollectFundFee<'info> {
@@ -17,30 +18,30 @@ pub struct CollectFundFee<'info> {
     pub pool_state: AccountLoader<'info, PoolState>,
 
     /// Amm config account stores fund_owner
-    #[account(address = pool_state.load()?.amm_config)]
+    #[account(address = pool_state.load() ?.amm_config)]
     pub amm_config: Account<'info, AmmConfig>,
 
     /// The address that holds pool tokens for token_0
     #[account(
-        mut,
-        constraint = token_vault_0.key() == pool_state.load()?.token_vault_0
+    mut,
+    constraint = token_vault_0.key() == pool_state.load() ?.token_vault_0
     )]
-    pub token_vault_0: Account<'info, TokenAccount>,
+    pub token_vault_0: InterfaceAccount<'info, TokenAccount>,
 
     /// The address that holds pool tokens for token_1
     #[account(
-        mut,
-        constraint = token_vault_1.key() == pool_state.load()?.token_vault_1
+    mut,
+    constraint = token_vault_1.key() == pool_state.load() ?.token_vault_1
     )]
-    pub token_vault_1: Account<'info, TokenAccount>,
+    pub token_vault_1: InterfaceAccount<'info, TokenAccount>,
 
     /// The address that receives the collected token_0 protocol fees
     #[account(mut)]
-    pub recipient_token_account_0: Account<'info, TokenAccount>,
+    pub recipient_token_account_0: InterfaceAccount<'info, TokenAccount>,
 
     /// The address that receives the collected token_1 protocol fees
     #[account(mut)]
-    pub recipient_token_account_1: Account<'info, TokenAccount>,
+    pub recipient_token_account_1: InterfaceAccount<'info, TokenAccount>,
 
     /// The SPL program to perform token transfers
     pub token_program: Program<'info, Token2022>,
@@ -57,7 +58,7 @@ pub fn collect_fund_fee(
         let mut pool_state = ctx.accounts.pool_state.load_mut()?;
         amount_0 = amount_0_requested.min(pool_state.fund_fees_token_0);
         amount_1 = amount_1_requested.min(pool_state.fund_fees_token_1);
-        
+
         pool_state.fund_fees_token_0 = pool_state.fund_fees_token_0.checked_sub(amount_0).unwrap();
         pool_state.fund_fees_token_1 = pool_state.fund_fees_token_1.checked_sub(amount_1).unwrap();
     }

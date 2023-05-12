@@ -3,8 +3,7 @@ use crate::error::ErrorCode;
 use crate::libraries::{big_num::U128, fixed_point_64, full_math::MulDiv};
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Token2022 };
-use anchor_spl::token::{TokenAccount};
+use anchor_spl::{token_interface::{Token2022, TokenAccount}};
 
 #[derive(Accounts)]
 pub struct IncreaseLiquidity<'info> {
@@ -15,7 +14,7 @@ pub struct IncreaseLiquidity<'info> {
     #[account(
         constraint = nft_account.mint == personal_position.nft_mint
     )]
-    pub nft_account: Box<Account<'info, TokenAccount>>,
+    pub nft_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(mut)]
     pub pool_state: AccountLoader<'info, PoolState>,
@@ -50,28 +49,28 @@ pub struct IncreaseLiquidity<'info> {
         mut,
         token::mint = token_vault_0.mint
     )]
-    pub token_account_0: Box<Account<'info, TokenAccount>>,
+    pub token_account_0: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The token account spending token_1 to mint the position
     #[account(
         mut,
         token::mint = token_vault_1.mint
     )]
-    pub token_account_1: Box<Account<'info, TokenAccount>>,
+    pub token_account_1: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The address that holds pool tokens for token_0
     #[account(
         mut,
         constraint = token_vault_0.key() == pool_state.load()?.token_vault_0
     )]
-    pub token_vault_0: Box<Account<'info, TokenAccount>>,
+    pub token_vault_0: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The address that holds pool tokens for token_1
     #[account(
         mut,
         constraint = token_vault_1.key() == pool_state.load()?.token_vault_1
     )]
-    pub token_vault_1: Box<Account<'info, TokenAccount>>,
+    pub token_vault_1: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// Program to create mint account and mint tokens
     pub token_program: Program<'info, Token2022>,

@@ -1,13 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_2022;
 use anchor_spl::token_interface::{Token2022, CloseAccount, TransferChecked, Burn};
-use anchor_spl::token::{TokenAccount, Mint};
+use anchor_spl::token_interface::{TokenAccount, Mint};
 use crate::states::*;
 
 pub fn transfer_from_user_to_pool_vault<'info>(
     signer: &Signer<'info>,
-    from: &Account<'info, TokenAccount>,
-    to_vault: &Account<'info, TokenAccount>,
+    from: &InterfaceAccount<'info, TokenAccount>,
+    to_vault: &InterfaceAccount<'info, TokenAccount>,
     token_program: &Program<'info, Token2022>,
     amount: u64,
     decimals: u8,
@@ -29,8 +29,8 @@ pub fn transfer_from_user_to_pool_vault<'info>(
 
 pub fn transfer_from_pool_vault_to_user<'info>(
     pool_state_loader: &AccountLoader<'info, PoolState>,
-    from_vault: &Account<'info, TokenAccount>,
-    to: &Account<'info, TokenAccount>,
+    from_vault: &InterfaceAccount<'info, TokenAccount>,
+    to: &InterfaceAccount<'info, TokenAccount>,
     token_program: &Program<'info, Token2022>,
     amount: u64,
 ) -> Result<()> {
@@ -87,8 +87,8 @@ pub fn close_spl_account<'a, 'b, 'c, 'info>(
 
 pub fn burn<'a, 'b, 'c, 'info>(
     owner: &Signer<'info>,
-    mint: &Account<'info, Mint>,
-    burn_account: &Account<'info, TokenAccount>,
+    mint: &InterfaceAccount<'info, Mint>,
+    burn_account: &InterfaceAccount<'info, TokenAccount>,
     token_program: &Program<'info, Token2022>,
     signers_seeds: &[&[&[u8]]],
     amount: u64,

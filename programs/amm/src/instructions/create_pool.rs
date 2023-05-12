@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, TokenAccount};
-use anchor_spl::token_interface::Token2022;
+use anchor_spl::token_interface::{Token2022, Mint, TokenAccount};
 
 use crate::libraries::tick_math;
 use crate::states::*;
@@ -33,10 +32,10 @@ pub struct CreatePool<'info> {
     #[account(
     constraint = token_mint_0.key() < token_mint_1.key()
     )]
-    pub token_mint_0: Box<Account<'info, Mint>>,
+    pub token_mint_0: Box<InterfaceAccount<'info, Mint>>,
 
     /// Token_1 mint
-    pub token_mint_1: Box<Account<'info, Mint>>,
+    pub token_mint_1: Box<InterfaceAccount<'info, Mint>>,
 
     /// Token_0 vault for the pool
     #[account(
@@ -51,7 +50,7 @@ pub struct CreatePool<'info> {
     token::mint = token_mint_0,
     token::authority = pool_state
     )]
-    pub token_vault_0: Box<Account<'info, TokenAccount>>,
+    pub token_vault_0: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// Token_1 vault for the pool
     #[account(
@@ -66,7 +65,7 @@ pub struct CreatePool<'info> {
     token::mint = token_mint_1,
     token::authority = pool_state
     )]
-    pub token_vault_1: Box<Account<'info, TokenAccount>>,
+    pub token_vault_1: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: Initialize an account to store oracle observations, the account must be created off-chain, constract will initialzied it
     pub observation_state: UncheckedAccount<'info>,

@@ -2,8 +2,7 @@ use super::{exact_internal, SwapAccounts};
 use crate::error::ErrorCode;
 use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Token2022};
-use anchor_spl::token::{TokenAccount};
+use anchor_spl::token_interface::{Token2022, TokenAccount};
 
 #[derive(Accounts)]
 pub struct SwapRouterBaseIn<'info> {
@@ -12,7 +11,7 @@ pub struct SwapRouterBaseIn<'info> {
 
     /// The token account that pays input tokens for the swap
     #[account(mut)]
-    pub input_token_account: Account<'info, TokenAccount>,
+    pub input_token_account: InterfaceAccount<'info, TokenAccount>,
 
     /// SPL program for token transfers
     pub token_program: Program<'info, Token2022>,
@@ -38,13 +37,13 @@ pub fn swap_router_base_in<'a, 'b, 'c, 'info>(
         let amm_config = Box::new(Account::<AmmConfig>::try_from(account_info)?);
         let mut pool_state_loader =
             AccountLoader::<PoolState>::try_from(remaining_accounts.next().unwrap())?;
-        let output_token_account = Box::new(Account::<TokenAccount>::try_from(
+        let output_token_account = Box::new(InterfaceAccount::<TokenAccount>::try_from(
             &remaining_accounts.next().unwrap(),
         )?);
-        let input_vault = Box::new(Account::<TokenAccount>::try_from(
+        let input_vault = Box::new(InterfaceAccount::<TokenAccount>::try_from(
             remaining_accounts.next().unwrap(),
         )?);
-        let output_vault = Box::new(Account::<TokenAccount>::try_from(
+        let output_vault = Box::new(InterfaceAccount::<TokenAccount>::try_from(
             remaining_accounts.next().unwrap(),
         )?);
         let mut observation_state =

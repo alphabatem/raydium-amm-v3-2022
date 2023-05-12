@@ -1,35 +1,37 @@
-use crate::error::ErrorCode;
-use crate::libraries::liquidity_math;
-use crate::states::*;
-use crate::util::*;
-use anchor_lang::prelude::*;
-use anchor_lang::solana_program;
-use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token;
-use anchor_spl::token_interface::{Token2022};
-use anchor_spl::token::{TokenAccount, Mint};
-use mpl_token_metadata::{instruction::create_metadata_accounts_v3, state::Creator};
-use spl_token::instruction::AuthorityType;
 use std::cell::RefMut;
 #[cfg(feature = "enable-log")]
 use std::convert::identity;
 use std::ops::Deref;
+
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_2022::spl_token_2022::instruction::AuthorityType;
+use anchor_spl::token_interface::{Mint, TokenAccount, Token2022};
+use anchor_spl::token_interface;
+use mpl_token_metadata::{instruction::create_metadata_accounts_v3, state::Creator};
+
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
+
+use crate::error::ErrorCode;
+use crate::libraries::liquidity_math;
+use crate::states::*;
+use crate::util::*;
 
 pub struct AddLiquidityParam<'b, 'info> {
     /// Pays to mint liquidity
     pub payer: &'b Signer<'info>,
 
     /// The token account spending token_0 to mint the position
-    pub token_account_0: &'b mut Box<Account<'info, TokenAccount>>,
+    pub token_account_0: &'b mut Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The token account spending token_1 to mint the position
-    pub token_account_1: &'b mut Box<Account<'info, TokenAccount>>,
+    pub token_account_1: &'b mut Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The address that holds pool tokens for token_0
-    pub token_vault_0: &'b mut Box<Account<'info, TokenAccount>>,
+    pub token_vault_0: &'b mut Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The address that holds pool tokens for token_1
-    pub token_vault_1: &'b mut Box<Account<'info, TokenAccount>>,
+    pub token_vault_1: &'b mut Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The bitmap storing initialization state of the lower tick
     pub tick_array_lower: &'b AccountLoader<'info, TickArrayState>,
@@ -45,7 +47,7 @@ pub struct AddLiquidityParam<'b, 'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(tick_lower_index: i32, tick_upper_index: i32,tick_array_lower_start_index:i32,tick_array_upper_start_index:i32)]
+#[instruction(tick_lower_index: i32, tick_upper_index: i32, tick_array_lower_start_index: i32, tick_array_upper_start_index: i32)]
 pub struct OpenPosition<'info> {
     /// Pays to mint the position
     #[account(mut)]
@@ -56,21 +58,21 @@ pub struct OpenPosition<'info> {
 
     /// Unique token mint address
     #[account(
-        init,
-        mint::decimals = 0,
-        mint::authority = pool_state.key(),
-        payer = payer
+    init,
+    mint::decimals = 0,
+    mint::authority = pool_state.key(),
+    payer = payer
     )]
-    pub position_nft_mint: Box<Account<'info, Mint>>,
+    pub position_nft_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// Token account where position NFT will be minted
     #[account(
-        init,
-        associated_token::mint = position_nft_mint,
-        associated_token::authority = position_nft_owner,
-        payer = payer
+    init,
+    associated_token::mint = position_nft_mint,
+    associated_token::authority = position_nft_owner,
+    payer = payer
     )]
-    pub position_nft_account: Box<Account<'info, TokenAccount>>,
+    pub position_nft_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// To store metaplex metadata
     /// CHECK: Safety check performed inside function body
@@ -83,80 +85,80 @@ pub struct OpenPosition<'info> {
 
     /// Store the information of market marking in range
     #[account(
-        init_if_needed,
-        seeds = [
-            POSITION_SEED.as_bytes(),
-            pool_state.key().as_ref(),
-            &tick_lower_index.to_be_bytes(),
-            &tick_upper_index.to_be_bytes(),
-        ],
-        bump,
-        payer = payer,
-        space = ProtocolPositionState::LEN
+    init_if_needed,
+    seeds = [
+    POSITION_SEED.as_bytes(),
+    pool_state.key().as_ref(),
+    & tick_lower_index.to_be_bytes(),
+    & tick_upper_index.to_be_bytes(),
+    ],
+    bump,
+    payer = payer,
+    space = ProtocolPositionState::LEN
     )]
     pub protocol_position: Box<Account<'info, ProtocolPositionState>>,
 
     /// CHECK: Account to mark the lower tick as initialized
     #[account(
-        mut,
-        seeds = [
-            TICK_ARRAY_SEED.as_bytes(),
-            pool_state.key().as_ref(),
-            &tick_array_lower_start_index.to_be_bytes(),
-        ],
-        bump,
+    mut,
+    seeds = [
+    TICK_ARRAY_SEED.as_bytes(),
+    pool_state.key().as_ref(),
+    & tick_array_lower_start_index.to_be_bytes(),
+    ],
+    bump,
     )]
     pub tick_array_lower: UncheckedAccount<'info>,
 
     /// CHECK:Account to store data for the position's upper tick
     #[account(
-        mut,
-        seeds = [
-            TICK_ARRAY_SEED.as_bytes(),
-            pool_state.key().as_ref(),
-            &tick_array_upper_start_index.to_be_bytes(),
-        ],
-        bump,
+    mut,
+    seeds = [
+    TICK_ARRAY_SEED.as_bytes(),
+    pool_state.key().as_ref(),
+    & tick_array_upper_start_index.to_be_bytes(),
+    ],
+    bump,
     )]
     pub tick_array_upper: UncheckedAccount<'info>,
 
     /// personal position state
     #[account(
-        init,
-        seeds = [POSITION_SEED.as_bytes(), position_nft_mint.key().as_ref()],
-        bump,
-        payer = payer,
-        space = PersonalPositionState::LEN
+    init,
+    seeds = [POSITION_SEED.as_bytes(), position_nft_mint.key().as_ref()],
+    bump,
+    payer = payer,
+    space = PersonalPositionState::LEN
     )]
     pub personal_position: Box<Account<'info, PersonalPositionState>>,
 
     /// The token_0 account deposit token to the pool
     #[account(
-        mut,
-        token::mint = token_vault_0.mint
+    mut,
+    token::mint = token_vault_0.mint
     )]
-    pub token_account_0: Box<Account<'info, TokenAccount>>,
+    pub token_account_0: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The token_1 account deposit token to the pool
     #[account(
-        mut,
-        token::mint = token_vault_1.mint
+    mut,
+    token::mint = token_vault_1.mint
     )]
-    pub token_account_1: Box<Account<'info, TokenAccount>>,
+    pub token_account_1: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The address that holds pool tokens for token_0
     #[account(
-        mut,
-        constraint = token_vault_0.key() == pool_state.load()?.token_vault_0
+    mut,
+    constraint = token_vault_0.key() == pool_state.load() ?.token_vault_0
     )]
-    pub token_vault_0: Box<Account<'info, TokenAccount>>,
+    pub token_vault_0: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The address that holds pool tokens for token_1
     #[account(
-        mut,
-        constraint = token_vault_1.key() == pool_state.load()?.token_vault_1
+    mut,
+    constraint = token_vault_1.key() == pool_state.load() ?.token_vault_1
     )]
-    pub token_vault_1: Box<Account<'info, TokenAccount>>,
+    pub token_vault_1: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// Sysvar for token mint and ATA creation
     pub rent: Sysvar<'info, Rent>,
@@ -410,7 +412,7 @@ pub fn add_liquidity<'b, 'info>(
     );
 
     let mut decimals;
-    if pool_state.token_mint_0.eq(&context.token_account_0.mint) { decimals = pool_state.mint_decimals_0 } else { decimals = pool_state.mint_decimals_1}
+    if pool_state.token_mint_0.eq(&context.token_account_0.mint) { decimals = pool_state.mint_decimals_0 } else { decimals = pool_state.mint_decimals_1 }
 
     transfer_from_user_to_pool_vault(
         &context.payer,
@@ -421,7 +423,7 @@ pub fn add_liquidity<'b, 'info>(
         decimals,
     )?;
 
-    if pool_state.token_mint_0.eq(&context.token_account_1.mint) { decimals = pool_state.mint_decimals_1 } else { decimals = pool_state.mint_decimals_0}
+    if pool_state.token_mint_0.eq(&context.token_account_1.mint) { decimals = pool_state.mint_decimals_1 } else { decimals = pool_state.mint_decimals_0 }
     transfer_from_user_to_pool_vault(
         &context.payer,
         &context.token_account_1,
@@ -579,10 +581,10 @@ fn create_nft_with_metadata<'info>(
         &[pool_state.bump] as &[u8],
     ];
     // Mint the NFT
-    token::mint_to(
+    token_interface::mint_to(
         CpiContext::new_with_signer(
             token_program.clone(),
-            token::MintTo {
+            token_interface::MintTo {
                 mint: position_nft_mint.clone(),
                 to: position_nft_account.clone(),
                 authority: pool_state_loader.to_account_info(),
@@ -611,7 +613,7 @@ fn create_nft_with_metadata<'info>(
         false,
         None,
         None,
-        None
+        None,
     );
     solana_program::program::invoke_signed(
         &create_metadata_ix,
@@ -626,10 +628,10 @@ fn create_nft_with_metadata<'info>(
         &[&seeds[..]],
     )?;
     // Disable minting
-    token::set_authority(
+    token_interface::set_authority(
         CpiContext::new_with_signer(
             token_program.clone(),
-            token::SetAuthority {
+            token_interface::SetAuthority {
                 current_authority: pool_state_loader.to_account_info(),
                 account_or_mint: position_nft_mint.clone(),
             },
@@ -643,13 +645,14 @@ fn create_nft_with_metadata<'info>(
 
 #[cfg(test)]
 mod modify_position_test {
-    use super::modify_position;
     use crate::error::ErrorCode;
     use crate::libraries::tick_math;
     use crate::states::oracle::block_timestamp_mock;
     use crate::states::pool_test::build_pool;
     use crate::states::protocol_position::*;
     use crate::states::tick_array_test::build_tick;
+
+    use super::modify_position;
 
     #[test]
     fn liquidity_delta_zero_empty_liquidity_not_allowed_test() {
@@ -697,7 +700,7 @@ mod modify_position_test {
             tick_upper_state,
             block_timestamp_mock(),
         )
-        .unwrap();
+            .unwrap();
         assert!(amount_0_int != 0);
         assert!(amount_1_int != 0);
         assert_eq!(flip_tick_lower, true);
@@ -764,7 +767,7 @@ mod modify_position_test {
             tick_upper_state,
             block_timestamp_mock(),
         )
-        .unwrap();
+            .unwrap();
         assert!(amount_0_int == 0);
         assert!(amount_1_int != 0);
         assert_eq!(flip_tick_lower, true);
@@ -829,7 +832,7 @@ mod modify_position_test {
             tick_upper_state,
             block_timestamp_mock(),
         )
-        .unwrap();
+            .unwrap();
         assert!(amount_0_int != 0);
         assert!(amount_1_int == 0);
         assert_eq!(flip_tick_lower, true);

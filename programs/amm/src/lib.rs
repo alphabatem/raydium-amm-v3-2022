@@ -1,30 +1,30 @@
+use anchor_lang::prelude::*;
+use instructions::*;
+use states::*;
+use util::access_control::*;
+
 pub mod error;
 pub mod instructions;
 pub mod libraries;
 pub mod states;
 pub mod util;
 
-use anchor_lang::prelude::*;
-use instructions::*;
-use states::*;
-use util::access_control::*;
-
 #[cfg(feature = "devnet")]
-declare_id!("devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH");
+declare_id!("2nR3829G7xE4UE48G5Z3j38wmSJRNq624r3vpnNwHwx4");
 #[cfg(not(feature = "devnet"))]
 declare_id!("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
 
 pub mod admin {
     use anchor_lang::prelude::declare_id;
+
     #[cfg(feature = "devnet")]
-    declare_id!("adMCyoCgfkg7bQiJ9aBJ59H3BXLY3r5LNLfPpQfMzBe");
+    declare_id!("2nR3829G7xE4UE48G5Z3j38wmSJRNq624r3vpnNwHwx4");
     #[cfg(not(feature = "devnet"))]
     declare_id!("GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ");
 }
 
 #[program]
 pub mod amm_v3 {
-
     use super::*;
 
     // The configuation of AMM protocol, include trade fee and protocol fee
@@ -303,7 +303,7 @@ pub mod amm_v3 {
     /// * `amount_0_max` - The max amount of token_0 to spend, which serves as a slippage check
     /// * `amount_1_max` - The max amount of token_1 to spend, which serves as a slippage check
     ///
-    #[access_control(is_authorized_for_token(&ctx.accounts.nft_owner, &ctx.accounts.nft_account))]
+    #[access_control(is_authorized_for_token(& ctx.accounts.nft_owner, & ctx.accounts.nft_account))]
     pub fn increase_liquidity<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, IncreaseLiquidity<'info>>,
         liquidity: u128,
@@ -322,7 +322,7 @@ pub mod amm_v3 {
     /// * `amount_0_min` - The minimum amount of token_0 that should be accounted for the burned liquidity
     /// * `amount_1_min` - The minimum amount of token_1 that should be accounted for the burned liquidity
     ///
-    #[access_control(is_authorized_for_token(&ctx.accounts.nft_owner, &ctx.accounts.nft_account))]
+    #[access_control(is_authorized_for_token(& ctx.accounts.nft_owner, & ctx.accounts.nft_account))]
     pub fn decrease_liquidity<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, DecreaseLiquidity<'info>>,
         liquidity: u128,

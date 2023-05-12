@@ -1,6 +1,6 @@
+use anchor_spl::token_interface::{TokenAccount, Token2022};
+
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
-use anchor_spl::token_interface::Token2022;
 
 use crate::error::ErrorCode;
 use crate::libraries::{fixed_point_64, full_math::MulDiv, U256};
@@ -18,7 +18,7 @@ pub struct InitializeReward<'info> {
     mut,
     token::mint = reward_token_mint
     )]
-    pub funder_token_account: Box<Account<'info, TokenAccount>>,
+    pub funder_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// For check the reward_funder authority
     #[account(address = pool_state.load() ?.amm_config)]
@@ -38,7 +38,7 @@ pub struct InitializeReward<'info> {
     pub operation_state: AccountLoader<'info, OperationState>,
 
     /// Reward mint
-    pub reward_token_mint: Box<Account<'info, TokenAccount>>,
+    pub reward_token_mint: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// A pda, reward vault
     #[account(
@@ -53,9 +53,9 @@ pub struct InitializeReward<'info> {
     token::mint = reward_token_mint,
     token::authority = pool_state
     )]
-    pub reward_token_vault: Box<Account<'info, TokenAccount>>,
+    pub reward_token_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    // #[account(address = token::ID)]
+    // #[account(address = token_interface::ID)]
     pub token_program: Program<'info, Token2022>,
 
     pub system_program: Program<'info, System>,

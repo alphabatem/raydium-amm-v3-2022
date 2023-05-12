@@ -1,9 +1,10 @@
+use anchor_spl::token_interface::{Mint, TokenAccount, Token2022};
+
+use anchor_lang::prelude::*;
+
 use crate::error::ErrorCode;
 use crate::states::*;
 use crate::util::{burn, close_spl_account};
-use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Token2022};
-use anchor_spl::token::{TokenAccount, Mint};
 
 #[derive(Accounts)]
 pub struct ClosePosition<'info> {
@@ -13,19 +14,19 @@ pub struct ClosePosition<'info> {
 
     /// Unique token mint address
     #[account(
-      mut,
-      address = personal_position.nft_mint
+    mut,
+    address = personal_position.nft_mint
     )]
-    pub position_nft_mint: Box<Account<'info, Mint>>,
+    pub position_nft_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// Token account where position NFT will be minted
     #[account(
-        mut,
-        associated_token::mint = position_nft_mint,
-        associated_token::authority = nft_owner,
-        constraint = position_nft_account.amount == 1
+    mut,
+    associated_token::mint = position_nft_mint,
+    associated_token::authority = nft_owner,
+    constraint = position_nft_account.amount == 1
     )]
-    pub position_nft_account: Box<Account<'info, TokenAccount>>,
+    pub position_nft_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// To store metaplex metadata
     /// CHECK: Safety check performed inside function body
@@ -34,10 +35,10 @@ pub struct ClosePosition<'info> {
 
     /// Metadata for the tokenized position
     #[account(
-        mut,
-        seeds = [POSITION_SEED.as_bytes(), position_nft_mint.key().as_ref()],
-        bump,
-        close = nft_owner
+    mut,
+    seeds = [POSITION_SEED.as_bytes(), position_nft_mint.key().as_ref()],
+    bump,
+    close = nft_owner
     )]
     pub personal_position: Box<Account<'info, PersonalPositionState>>,
 
@@ -74,14 +75,14 @@ pub fn close_position<'a, 'b, 'c, 'info>(
         }
     }
 
-        burn(
-            &ctx.accounts.nft_owner,
-            &ctx.accounts.position_nft_mint,
-            &ctx.accounts.position_nft_account,
-            &ctx.accounts.token_program,
-            &[],
-            1,
-        )?;
+    burn(
+        &ctx.accounts.nft_owner,
+        &ctx.accounts.position_nft_mint,
+        &ctx.accounts.position_nft_account,
+        &ctx.accounts.token_program,
+        &[],
+        1,
+    )?;
 
 
     close_spl_account(

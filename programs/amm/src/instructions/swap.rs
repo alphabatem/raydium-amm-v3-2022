@@ -5,7 +5,7 @@ use std::convert::identity;
 use std::ops::Neg;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token_interface::TokenAccount;
 use anchor_spl::token_interface::Token2022;
 
 use crate::error::ErrorCode;
@@ -33,19 +33,19 @@ pub struct SwapSingle<'info> {
 
     /// The user token account for input token
     #[account(mut)]
-    pub input_token_account: Box<Account<'info, TokenAccount>>,
+    pub input_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The user token account for output token
     #[account(mut)]
-    pub output_token_account: Box<Account<'info, TokenAccount>>,
+    pub output_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The vault token account for input token
     #[account(mut)]
-    pub input_vault: Box<Account<'info, TokenAccount>>,
+    pub input_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The vault token account for output token
     #[account(mut)]
-    pub output_vault: Box<Account<'info, TokenAccount>>,
+    pub output_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The program account for the most recent oracle observation
     #[account(mut, address = pool_state.load() ?.observation_key)]
@@ -63,16 +63,16 @@ pub struct SwapAccounts<'b, 'info> {
     pub signer: Signer<'info>,
 
     /// The user token account for input token
-    pub input_token_account: Box<Account<'info, TokenAccount>>,
+    pub input_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The user token account for output token
-    pub output_token_account: Box<Account<'info, TokenAccount>>,
+    pub output_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The vault token account for input token
-    pub input_vault: Box<Account<'info, TokenAccount>>,
+    pub input_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// The vault token account for output token
-    pub output_vault: Box<Account<'info, TokenAccount>>,
+    pub output_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// SPL program for token transfers
     pub token_program: Program<'info, Token2022>,

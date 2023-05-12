@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{TokenAccount};
+use anchor_spl::token_interface::{TokenAccount};
 
 use crate::error::ErrorCode;
 
@@ -12,7 +12,7 @@ use crate::error::ErrorCode;
 ///
 pub fn is_authorized_for_token<'info>(
     signer: &Signer<'info>,
-    token_account: &Box<Account<'info, TokenAccount>>,
+    token_account: &Box<InterfaceAccount<'info, TokenAccount>>,
 ) -> Result<()> {
     require!(
         token_account.amount == 1 && token_account.owner == signer.key(),
